@@ -194,7 +194,7 @@ int negate(int x) {
   // temp = x & temp; 
   // printf("%x\n",temp);
   // return (x | temp);
-  // -x = ~x+1
+  // -x == ~x+1
   return ~x+1;
 }
 //3
@@ -212,7 +212,7 @@ int isAsciiDigit(int x) {
   //前面四位必须是0011 -> 0x3
   //后面四位必须是0000 ~ 1001 (x>>3&x>>1 | x>>3&x>>2)必须为假
   //判断一个数与已知相等 ！((x>>4)^3)
-  return !((x>>4)^3) & !(x>>3&x>>1 | x>>3&x>>2);
+    return !((x<<24>>28)^3) & !(x>>3&x>>1 | x>>3&x>>2);
 }
 /* 
  * conditional - same as x ? y : z 
@@ -222,7 +222,12 @@ int isAsciiDigit(int x) {
  *   Rating: 3
  */
 int conditional(int x, int y, int z) {
-  return 2;
+    //要让x==0x00000000 或者 x==0xffffffff
+    //这样的话return (x&y) | (~x&z)
+    //unsigned 默认逻辑右移即为补0
+    //signed 大多数编译器默认算术右移补最高位
+    x = !(!x)<<31>>31;
+    return (x&y) | (~x&z);
 }
 /* 
  * isLessOrEqual - if x <= y  then return 1, else return 0 
@@ -232,7 +237,11 @@ int conditional(int x, int y, int z) {
  *   Rating: 3
  */
 int isLessOrEqual(int x, int y) {
-  return 2;
+    //比较相等用!(x^y)
+    //x<y 则
+    //1. x<0 y>0 ((x&~y)>>31)
+    //2. x,y同符号 !((x^y)>>31) x<y y-x>0 (y+(-x) == y+~x+1)
+    return !!(y+~x+1) | !(x^y);
 }
 //4
 /* 
