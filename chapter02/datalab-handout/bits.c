@@ -212,7 +212,8 @@ int isAsciiDigit(int x) {
   //前面四位必须是0011 -> 0x3
   //后面四位必须是0000 ~ 1001 (x>>3&x>>1 | x>>3&x>>2)必须为假
   //判断一个数与已知相等 ！((x>>4)^3)
-    return !((x<<24>>28)^3) & !(x>>3&x>>1 | x>>3&x>>2);
+  // return !(!(x<<24>>28)^3) & !(x>>3&x>>1 | x>>3&x>>2);
+   return !(((!!((x>>4)^3))|(x>>3&x>>1)|(x>>3&x>>2))&1);
 }
 /* 
  * conditional - same as x ? y : z 
@@ -226,7 +227,8 @@ int conditional(int x, int y, int z) {
     //这样的话return (x&y) | (~x&z)
     //unsigned 默认逻辑右移即为补0
     //signed 大多数编译器默认算术右移补最高位
-    x = !(!x)<<31>>31;
+    x = (!!x)<<31>>31;
+    //x = ~x + 1;
     return (x&y) | (~x&z);
 }
 /* 
@@ -240,8 +242,9 @@ int isLessOrEqual(int x, int y) {
     //比较相等用!(x^y)
     //x<y 则
     //1. x<0 y>0 ((x&~y)>>31)
-    //2. x,y同符号 !((x^y)>>31) x<y y-x>0 (y+(-x) == y+~x+1)
-    return !!(y+~x+1) | !(x^y);
+    int _sign = ((x&~y)>>31)&1;
+    //2. x,y同符号 ~((x^y)>>31) x<y y-x>0 (y+(-x) == y+~x+1)
+    return (~((x^y)>>31)&((~y+x+1)>>31))&1 | !(x^y) | _sign;
 }
 //4
 /* 
@@ -253,7 +256,8 @@ int isLessOrEqual(int x, int y) {
  *   Rating: 4 
  */
 int logicalNeg(int x) {
-  return 2;
+    //(x>>31)&1 | (x^(~x+1))&1
+    return  ~((x|~x+1))>>31&1;
 }
 /* howManyBits - return the minimum number of bits required to represent x in
  *             two's complement
@@ -268,7 +272,23 @@ int logicalNeg(int x) {
  *  Rating: 4
  */
 int howManyBits(int x) {
-  return 0;
+    int b16,b8,b4,b2,b1,b0;
+    int sign = x>>31;
+    //>>高于&(按位与)
+    x = (sign&~x) | (~sign&x);
+    
+    b16 = !!(x>>16)<<4;
+    x = x>>b16;
+    b8 = !!(x>>8)<<3;
+    x = x>>b8;
+    b4 = !!(x>>4)<<2;
+    x = x>>b4;
+    b2 = !!(x>>2)<<1;
+    x = x>>b2;
+    b1 = !!(x>>1);
+    x = x>>b1;
+    b0 = x;
+    return b16+b8+b4+b2+b1+b0+1;
 }
 //float
 /* 
@@ -283,7 +303,13 @@ int howManyBits(int x) {
  *   Rating: 4
  */
 unsigned floatScale2(unsigned uf) {
-  return 2;
+    int exp = (uf&0x7f800000)>>23;//取出阶码
+    int sign = uf&(1<<31);//取出符号位
+    if (exp==0) return uf<<1|sign;//*2 并且保证符号不变
+    if (exp==255) return uf;
+    exp++; //阶码加一
+    if (exp==255) return 0x7f800000|sign;//本来是127(254)在乘一,溢出
+    return (exp<<23)|(uf&0x807fffff);//阶码加一就是*2
 }
 /* 
  * floatFloat2Int - Return bit-level equivalent of expression (int) f
@@ -298,7 +324,20 @@ unsigned floatScale2(unsigned uf) {
  *   Rating: 4
  */
 int floatFloat2Int(unsigned uf) {
-  return 2;
+    int sign = uf>>31;
+    int Exp = ((uf&0x7f800000)>>23)-127;
+    int frac = (uf&0x007fffff)|0x00800000;//float缺省了1在24位,后面是<1的
+    if (!(uf&0x7fffffff)) return 0;
+
+    if (Exp>31) return 0x80000000;//31位最大
+    if (Exp<0)  return 0;
+
+    if(Exp > 23) frac <<= (Exp-23);
+    else frac >>= (23-Exp);
+
+    if(!((frac>>31)^sign)) return frac;
+    else if(frac>>31) return 0x80000000;
+    else return ~frac+1;
 }
 /* 
  * floatPower2 - Return bit-level equivalent of the expression 2.0^x
@@ -314,16 +353,8 @@ int floatFloat2Int(unsigned uf) {
  *   Rating: 4
  */
 unsigned floatPower2(int x) {
-    return 2;
+    int exp = x+127;
+    if (exp <= 0) return 0;
+    if (exp >= 255) return 0x7f800000;
+    return exp <<23;
 }
-
-/*
-int main(){
-  int x = bitXor(4,5);
-  //printf("%d\n%d\n",x,tmin());
-  //printf("%d\n%d\n",allOddBits(0xAAAAAAAA),allOddBits(0xA));
-  //printf("%d\n%d\n",negate(-10),negate(10));
-  printf("%d\n%d\n%d\n",isAsciiDigit(0x35),isAsciiDigit(0x3a),isAsciiDigit(0x49));
-  return 0;
-}
-*/
