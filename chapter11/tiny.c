@@ -30,7 +30,7 @@ int main(int argc, char **argv)
     /* Check command line args */
     if (argc != 2)
     {
-        fprintf(stderr, "usage: %s <port>\n", argv[0]);
+        fprintf(stderr, "us age: %s <port>\n", argv[0]);
         exit(1);
     }
 
@@ -67,6 +67,7 @@ void doit(int fd)
         return;
     printf("%s", buf);                             //buf是第一行读取的数据, GET / HTTP/1.1
     sscanf(buf, "%s %s %s", method, uri, version); //line:netp:doit:parserequest
+    printf("%s %s %s\n", method, uri, version); //作业11-6A
     //忽略大小写的差异,进行比较
     if (strcasecmp(method, "GET"))
     { //line:netp:doit:beginrequesterr
@@ -122,7 +123,7 @@ void read_requesthdrs(rio_t *rp)
     Rio_readlineb(rp, buf, MAXLINE); //这一行是先读取一次，后面while判断
     printf("%s", buf);
     //当buf大于"\r\n"就读取下面的 并且print
-    while (strcmp(buf, "\r\n"))
+    while (strcmp(buf, "\r\n")) //请求头以单独的"\r\n"结束
     { //line:netp:readhdrs:checkterm
         Rio_readlineb(rp, buf, MAXLINE);
         printf("%s", buf);
@@ -151,7 +152,7 @@ int parse_uri(char *uri, char *filename, char *cgiargs)
 
         //如果最后面是'/'，手动跳转一下到home.html
         if (uri[strlen(uri) - 1] == '/')   //line:netp:parseuri:slashcheck
-            strcat(filename, "home.html"); //line:netp:parseuri:appenddefault
+            strcat(filename, "1.mp4"); //line:netp:parseuri:appenddefault
         return 1;
     }
     else
@@ -198,10 +199,16 @@ void serve_static(int fd, char *filename, int filesize)
 
     /* Send response body to client */
     srcfd = Open(filename, O_RDONLY, 0);                        //line:netp:servestatic:open
-    srcp = Mmap(0, filesize, PROT_READ, MAP_PRIVATE, srcfd, 0); //line:netp:servestatic:mmap
-    Close(srcfd);                                               //line:netp:servestatic:close
-    Rio_writen(fd, srcp, filesize);                             //line:netp:servestatic:write
-    Munmap(srcp, filesize);                                     //line:netp:servestatic:munmap
+    // srcp = Mmap(0, filesize, PROT_READ, MAP_PRIVATE, srcfd, 0); //line:netp:servestatic:mmap
+    // Close(srcfd);                                               //line:netp:servestatic:close
+    // Rio_writen(fd, srcp, filesize);                             //line:netp:servestatic:write
+    // Munmap(srcp, filesize);                                     //line:netp:servestatic:munmap
+    srcp = (char *) malloc(filesize * sizeof(char));
+    rio_t rio;
+    Rio_readinitb(&rio, srcfd);
+    Rio_readnb(&rio, srcp, filesize);
+    Rio_writen(fd, srcp, filesize);
+    free(srcp); 
 }
 
 /*
@@ -217,6 +224,8 @@ void get_filetype(char *filename, char *filetype)
         strcpy(filetype, "image/png");
     else if (strstr(filename, ".jpg"))
         strcpy(filetype, "image/jpeg");
+    else if (strstr(filename, ".mp4"))
+        strcpy(filetype, "video/mpeg4");
     else
         strcpy(filetype, "text/plain");
 }
@@ -244,6 +253,7 @@ void serve_dynamic(int fd, char *filename, char *cgiargs)
         Dup2(fd, STDOUT_FILENO); /* Redirect stdout to client */    //line:netp:servedynamic:dup2
         Execve(filename, emptylist, environ); /* Run CGI program */ //line:netp:servedynamic:execve
     }
+    //等待子进程die，完成后函数才结束
     Wait(NULL); /* Parent waits for and reaps child */ //line:netp:servedynamic:wait
 }
 /* $end serve_dynamic */
