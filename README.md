@@ -15,3 +15,9 @@
 [第十一章网络编程](https://bowser1704.github.io/note/2019/11/13/csapp-chapter11-网络编程/)
 
 [第十二章并发编程](https://bowser1704.github.io/note/2019/11/14/csapp-chapter12-%E5%B9%B6%E5%8F%91%E7%BC%96%E7%A8%8B/)
+
+## lab
+
+[datalab](./labs/datalab-handout/)
+
+[bomblab](./labs/bomb/)
