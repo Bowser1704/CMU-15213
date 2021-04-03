@@ -21,6 +21,7 @@ void clienterror(int fd, char *cause, char *errnum,
 void init_hdrs(char *hdrs, char *hostname);
 void init_request(char *method, char *path, char *version, char *hdrs, char *request);
 void do_request(char *hostname, char *port, char *request, char *response);
+void *do_thread(void *fd);
 
 int main(int argc, char **argv) {
     if (argc != 2) {
@@ -33,16 +34,25 @@ int main(int argc, char **argv) {
     struct sockaddr_storage clientaddr;
     char hostname[MAX_HOSTNAME_SIZE], port[MAX_PORT_SIZE];
     listenfd = Open_listenfd(argv[1]);
+    pthread_t tha;
 
     while (1) {
         clientlen = sizeof(clientaddr);
         connfd = Accept(listenfd, (SA *)&clientaddr, &clientlen);  //Accept web client
         Getnameinfo((SA *)&clientaddr, clientlen, hostname, MAX_HOSTNAME_SIZE, port, MAX_PORT_SIZE, 0);
         printf("Acceped connection from %s:%s\n", hostname, port);
-        do_proxy(connfd);
-        Close(connfd);
+        Pthread_create(&tha, NULL, do_thread, (void *)&connfd);
     }
     return 0;
+}
+
+void *do_thread(void *arg) {
+    int connfd = *(int *)(arg);
+    pthread_t th = Pthread_self();
+    Pthread_detach(th);
+    do_proxy(connfd);
+    Close(connfd);
+    return NULL;
 }
 
 int do_proxy(int fd) {
