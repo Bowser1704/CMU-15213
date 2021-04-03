@@ -72,6 +72,7 @@ function download_noproxy {
 function clear_dirs {
     rm -rf ${PROXY_DIR}/*
     rm -rf ${NOPROXY_DIR}/*
+    # continue
 }
 
 #
